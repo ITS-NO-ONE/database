@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Shop Inventory</title>
+    <!-- Link to the manifest file -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Theme color for the browser address bar -->
+    <meta name="theme-color" content="#3B82F6">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .view {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .view.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .nav-btn {
+            flex-grow: 1;
+            padding: 0.75rem 0;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #6B7280; /* text-gray-500 */
+            border-top: 2px solid transparent;
+            transition: all 0.2s ease-in-out;
+        }
+        .nav-btn.active {
+            color: #3B82F6; /* text-blue-500 */
+            border-top-color: #3B82F6; /* border-blue-500 */
+        }
+        .log-entry-sold { border-left: 4px solid #EF4444; } /* red-500 */
+        .log-entry-purchased { border-left: 4px solid #22C55E; } /* green-500 */
+        .log-entry-added { border-left: 4px solid #3B82F6; } /* blue-500 */
+        .log-entry-edited { border-left: 4px solid #F97316; } /* orange-500 */
+        .log-entry-deleted { border-left: 4px solid #6B7280; } /* gray-500 */
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="app" class="max-w-md mx-auto bg-white min-h-screen shadow-lg pb-16">
+
+        <!-- Main Content Area -->
+        <div id="main-content">
+            <!-- List View -->
+            <div id="list-view" class="view active">
+                <header class="bg-white sticky top-0 z-10 shadow-sm">
+                    <div class="flex justify-between items-center p-4">
+                        <h1 class="text-xl font-bold text-gray-800">Inventory</h1>
+                        <div class="flex items-center space-x-4">
+                            <svg id="search-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                    </div>
+                     <div class="px-4 pb-3">
+                        <input type="text" id="search-input" placeholder="Search items..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </header>
+                
+                <main id="inventory-list" class="p-4 space-y-3 pb-24">
+                    <!-- Items will be injected here -->
+                </main>
+
+                <div id="no-items" class="text-center text-gray-500 mt-32 hidden">
+                    <p>No items in inventory.</p>
+                    <p class="text-sm">Click the '+' button to add one.</p>
+                </div>
+
+                <button id="add-item-fab" class="fixed bottom-20 right-1/2 translate-x-1/2 md:right-6 md:translate-x-0 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg text-3xl font-light hover:bg-blue-700 transition">
+                    +
+                </button>
+            </div>
+
+            <!-- Log View -->
+            <div id="log-view" class="view">
+                <header class="bg-white sticky top-0 z-10 shadow-sm">
+                    <div class="flex justify-between items-center p-4">
+                        <h1 class="text-xl font-bold text-gray-800">Transaction Log</h1>
+                    </div>
+                </header>
+                <main id="transaction-log" class="p-4 space-y-3">
+                    <!-- Log entries will be injected here -->
+                </main>
+                 <div id="no-logs" class="text-center text-gray-500 mt-32 hidden">
+                    <p>No transactions recorded yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form View (Add/Edit) -->
+        <div id="form-view" class="view">
+            <header class="bg-white sticky top-0 z-10 shadow-sm flex items-center p-4">
+                <button id="back-to-list-from-form" class="mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h1 id="form-title" class="text-xl font-bold text-gray-800">Add Item</h1>
+            </header>
+            
+            <form id="item-form" class="p-6 space-y-6">
+                <input type="hidden" id="item-id">
+                <div>
+                    <label for="item-name" class="block text-sm font-medium text-gray-700">Item Name*</label>
+                    <input type="text" id="item-name" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity*</label>
+                    <input type="number" id="quantity" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="quality" class="block text-sm font-medium text-gray-700">Quality</label>
+                    <input type="text" id="quality" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="buy-price" class="block text-sm font-medium text-gray-700">Buy Price*</label>
+                    <input type="number" id="buy-price" required step="10" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                 <div>
+                    <label for="sell-price" class="block text-sm font-medium text-gray-700">Sell Price*</label>
+                    <input type="number" id="sell-price" required step="10" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex justify-end space-x-4 pt-4">
+                    <button type="button" id="cancel-form" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Details View -->
+        <div id="details-view" class="view">
+            <header class="bg-white sticky top-0 z-10 shadow-sm flex items-center p-4">
+                <button id="back-to-list-from-details" class="mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h1 id="details-item-name" class="text-xl font-bold text-gray-800">Item Details</h1>
+                 <div class="ml-auto flex items-center space-x-4">
+                    <button id="delete-item-details-btn" class="text-red-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </div>
+            </header>
+            <main class="p-6 space-y-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between items-center py-2 border-b">
+                        <span class="text-gray-600">Quantity</span>
+                        <span id="details-quantity" class="font-semibold text-gray-800"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b">
+                        <span class="text-gray-600">Quality</span>
+                        <span id="details-quality" class="font-semibold text-gray-800"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b">
+                        <span class="text-gray-600">Buy Price</span>
+                        <span id="details-buy-price" class="font-semibold text-gray-800"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-gray-600">Sell Price</span>
+                        <span id="details-sell-price" class="font-semibold text-gray-800"></span>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="flex justify-between items-center py-2 border-b border-blue-200">
+                        <span class="text-blue-800">Total Stock Value (Buy)</span>
+                        <span id="details-total-buy" class="font-bold text-blue-900"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-blue-200">
+                        <span class="text-blue-800">Total Stock Value (Sell)</span>
+                        <span id="details-total-sell" class="font-bold text-blue-900"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-blue-200">
+                        <span class="text-green-800">Profit per Item</span>
+                        <span id="details-profit-per-item" class="font-bold text-green-900"></span>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-green-800">Potential Profit (Stock)</span>
+                        <span id="details-total-profit" class="font-bold text-green-900"></span>
+                    </div>
+                </div>
+            </main>
+             <button id="edit-item-details-fab" class="fixed bottom-20 right-1/2 translate-x-1/2 md:right-6 md:translate-x-0 bg-green-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-700 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L16.732 3.732z" /></svg>
+            </button>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+                <h3 class="text-lg font-bold text-gray-800">Confirm Deletion</h3>
+                <p class="text-gray-600 mt-2 mb-6">Are you sure you want to delete this item? This action cannot be undone.</p>
+                <div class="flex justify-center space-x-4">
+                    <button id="cancel-delete-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button id="confirm-delete-btn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quantity Confirmation Modal -->
+        <div id="quantity-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+                <h3 id="quantity-modal-title" class="text-lg font-bold text-gray-800">Confirm Change</h3>
+                <p id="quantity-modal-text" class="text-gray-600 mt-2 mb-6">Are you sure?</p>
+                <div class="flex justify-center space-x-4">
+                    <button id="cancel-quantity-btn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button id="confirm-quantity-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex shadow-top z-20">
+            <button id="nav-inventory" class="nav-btn active">
+                Inventory
+            </button>
+            <button id="nav-log" class="nav-btn">
+                Log
+            </button>
+        </nav>
+    </div>
+
+    <script>
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- STATE MANAGEMENT ---
+            let inventory = [];
+            let transactions = [];
+            let currentMainView = 'list';
+            let currentSubView = null; // for form, details
+            let currentItemId = null;
+            let itemIdToDelete = null;
+            let itemToChange = null;
+            let quantityChangeType = null;
+
+
+            // --- DOM ELEMENTS ---
+            const mainViews = {
+                list: document.getElementById('list-view'),
+                log: document.getElementById('log-view'),
+            };
+            const subViews = {
+                 form: document.getElementById('form-view'),
+                 details: document.getElementById('details-view'),
+            }
+            const inventoryList = document.getElementById('inventory-list');
+            const transactionLog = document.getElementById('transaction-log');
+            const noItemsMessage = document.getElementById('no-items');
+            const noLogsMessage = document.getElementById('no-logs');
+            const itemForm = document.getElementById('item-form');
+            const formTitle = document.getElementById('form-title');
+            const searchInput = document.getElementById('search-input');
+            const deleteModal = document.getElementById('delete-modal');
+            const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+            const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+            const quantityModal = document.getElementById('quantity-modal');
+            const quantityModalTitle = document.getElementById('quantity-modal-title');
+            const quantityModalText = document.getElementById('quantity-modal-text');
+            const cancelQuantityBtn = document.getElementById('cancel-quantity-btn');
+            const confirmQuantityBtn = document.getElementById('confirm-quantity-btn');
+            const navInventoryBtn = document.getElementById('nav-inventory');
+            const navLogBtn = document.getElementById('nav-log');
+
+
+            // --- LOCAL STORAGE ---
+            const loadData = () => {
+                const storedInventory = localStorage.getItem('bikeShopInventory');
+                inventory = storedInventory ? JSON.parse(storedInventory) : [];
+                const storedTransactions = localStorage.getItem('bikeShopTransactions');
+                transactions = storedTransactions ? JSON.parse(storedTransactions) : [];
+            };
+
+            const saveData = () => {
+                localStorage.setItem('bikeShopInventory', JSON.stringify(inventory));
+                localStorage.setItem('bikeShopTransactions', JSON.stringify(transactions));
+            };
+            
+            // --- NAVIGATION ---
+            const navigateTo = (viewName) => {
+                currentSubView = null;
+                Object.values(subViews).forEach(v => v.classList.remove('active'));
+                
+                if (mainViews[viewName]) {
+                    currentMainView = viewName;
+                    Object.values(mainViews).forEach(v => v.classList.remove('active'));
+                    mainViews[viewName].classList.add('active');
+                    
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    if(viewName === 'list') {
+                        navInventoryBtn.classList.add('active');
+                        renderInventoryList();
+                    } else if (viewName === 'log') {
+                        navLogBtn.classList.add('active');
+                        renderLog();
+                    }
+                } else if(subViews[viewName]){
+                     currentSubView = viewName;
+                     subViews[viewName].classList.add('active');
+                }
+                window.scrollTo(0, 0);
+            };
+
+            // --- LOGGING ---
+            const logTransaction = (type, item, quantityChange = 0) => {
+                const log = {
+                    id: Date.now().toString(),
+                    timestamp: new Date().toISOString(),
+                    type: type, // 'Sold', 'Purchased', 'Added', 'Edited', 'Deleted'
+                    itemName: item.name,
+                    quantityChange: quantityChange,
+                    newQuantity: item.quantity,
+                };
+                transactions.unshift(log);
+                saveData();
+                renderLog();
+            };
+
+            // --- RENDERING ---
+            const formatCurrency = (amount) => `Rs.${parseFloat(amount).toFixed(2)}`;
+            const formatTimestamp = (isoString) => {
+                const date = new Date(isoString);
+                return date.toLocaleString('en-US', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                });
+            };
+
+            const renderInventoryList = (itemsToRender) => {
+                const currentSearchTerm = searchInput.value.toLowerCase();
+                const items = itemsToRender || inventory.filter(item => 
+                    item.name.toLowerCase().includes(currentSearchTerm)
+                );
+                
+                inventoryList.innerHTML = '';
+
+                if (inventory.length === 0) {
+                    noItemsMessage.classList.remove('hidden');
+                    inventoryList.classList.add('hidden');
+                } else {
+                    noItemsMessage.classList.add('hidden');
+                    inventoryList.classList.remove('hidden');
+                }
+                
+                items.forEach(item => {
+                    const itemCard = document.createElement('div');
+                    itemCard.className = 'bg-white p-4 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition';
+                    itemCard.dataset.id = item.id;
+                    itemCard.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-lg text-gray-800 mb-2">${item.name}</h3>
+                                <div class="flex items-center space-x-2">
+                                    <p class="text-gray-500 text-sm">Qty:</p>
+                                    <button data-action="decrement" data-id="${item.id}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full w-7 h-7 flex items-center justify-center font-bold text-lg">-</button>
+                                    <span class="font-medium text-gray-800 w-6 text-center">${item.quantity}</span>
+                                    <button data-action="increment" data-id="${item.id}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full w-7 h-7 flex items-center justify-center font-bold text-lg">+</button>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-gray-900">${formatCurrency(item.sellPrice)}</p>
+                                <div class="flex items-center space-x-3 mt-4">
+                                    <button data-action="delete" data-id="${item.id}" class="text-red-500 hover:text-red-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                    <button data-action="edit" data-id="${item.id}" class="text-blue-500 hover:text-blue-700">
+                                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L16.732 3.732z" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    inventoryList.appendChild(itemCard);
+                });
+            };
+
+            const renderLog = () => {
+                transactionLog.innerHTML = '';
+                if(transactions.length === 0){
+                    noLogsMessage.classList.remove('hidden');
+                } else {
+                    noLogsMessage.classList.add('hidden');
+                }
+
+                transactions.forEach(log => {
+                    const logCard = document.createElement('div');
+                    let logTypeClass = '';
+                    let actionText = '';
+                    switch (log.type) {
+                        case 'Sold': 
+                            logTypeClass = 'log-entry-sold'; 
+                            actionText = `Sold 1 unit.`;
+                            break;
+                        case 'Purchased': 
+                            logTypeClass = 'log-entry-purchased'; 
+                            actionText = `Purchased 1 unit.`;
+                            break;
+                        case 'Added': 
+                            logTypeClass = 'log-entry-added'; 
+                            actionText = `Added to inventory.`;
+                            break;
+                        case 'Edited': 
+                            logTypeClass = 'log-entry-edited'; 
+                             actionText = `Details edited.`;
+                            break;
+                        case 'Deleted': 
+                            logTypeClass = 'log-entry-deleted'; 
+                            actionText = `Deleted from inventory.`;
+                            break;
+                    }
+                    logCard.className = `bg-white p-3 rounded-md shadow-sm border ${logTypeClass}`;
+                    logCard.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-gray-800">${log.itemName}</p>
+                                <p class="text-sm text-gray-600">${actionText} New Qty: ${log.newQuantity}</p>
+                            </div>
+                            <p class="text-xs text-gray-400">${formatTimestamp(log.timestamp)}</p>
+                        </div>
+                    `;
+                    transactionLog.appendChild(logCard);
+                });
+            };
+
+            const renderDetailsView = (item) => {
+                currentItemId = item.id;
+                document.getElementById('details-item-name').textContent = item.name;
+                document.getElementById('details-quantity').textContent = item.quantity;
+                document.getElementById('details-quality').textContent = item.quality || 'N/A';
+                document.getElementById('details-buy-price').textContent = formatCurrency(item.buyPrice);
+                document.getElementById('details-sell-price').textContent = formatCurrency(item.sellPrice);
+
+                const totalBuy = item.quantity * item.buyPrice;
+                const totalSell = item.quantity * item.sellPrice;
+                const profitPerItem = item.sellPrice - item.buyPrice;
+                const totalProfit = profitPerItem * item.quantity;
+
+                document.getElementById('details-total-buy').textContent = formatCurrency(totalBuy);
+                document.getElementById('details-total-sell').textContent = formatCurrency(totalSell);
+                document.getElementById('details-profit-per-item').textContent = formatCurrency(profitPerItem);
+                document.getElementById('details-total-profit').textContent = formatCurrency(totalProfit);
+                
+                navigateTo('details');
+            };
+            
+            // --- EVENT HANDLERS ---
+            const showForm = (item) => {
+                itemForm.reset();
+                if (item) {
+                    formTitle.textContent = 'Edit Item';
+                    document.getElementById('item-id').value = item.id;
+                    document.getElementById('item-name').value = item.name;
+                    document.getElementById('quantity').value = item.quantity;
+                    document.getElementById('quality').value = item.quality;
+                    document.getElementById('buy-price').value = item.buyPrice;
+                    document.getElementById('sell-price').value = item.sellPrice;
+                } else {
+                    formTitle.textContent = 'Add Item';
+                    document.getElementById('item-id').value = '';
+                }
+                navigateTo('form');
+            };
+
+            const handleFormSubmit = (e) => {
+                e.preventDefault();
+                const id = document.getElementById('item-id').value;
+                const itemData = {
+                    name: document.getElementById('item-name').value,
+                    quantity: parseInt(document.getElementById('quantity').value, 10),
+                    quality: document.getElementById('quality').value,
+                    buyPrice: parseFloat(document.getElementById('buy-price').value),
+                    sellPrice: parseFloat(document.getElementById('sell-price').value),
+                };
+
+                if (id) {
+                    const index = inventory.findIndex(item => item.id === id);
+                    if (index > -1) {
+                        inventory[index] = { ...inventory[index], ...itemData };
+                        logTransaction('Edited', inventory[index]);
+                    }
+                } else {
+                    itemData.id = Date.now().toString();
+                    inventory.push(itemData);
+                    logTransaction('Added', itemData);
+                }
+                
+                saveData();
+                renderInventoryList();
+                navigateTo('list');
+            };
+
+            const handleDelete = (id) => {
+                itemIdToDelete = id;
+                deleteModal.classList.remove('hidden');
+            };
+            
+            // --- EVENT LISTENERS ---
+            navInventoryBtn.addEventListener('click', () => navigateTo('list'));
+            navLogBtn.addEventListener('click', () => navigateTo('log'));
+
+            document.getElementById('add-item-fab').addEventListener('click', () => showForm(null));
+            document.getElementById('back-to-list-from-form').addEventListener('click', () => navigateTo(currentMainView));
+            document.getElementById('cancel-form').addEventListener('click', () => navigateTo(currentMainView));
+            document.getElementById('back-to-list-from-details').addEventListener('click', () => navigateTo(currentMainView));
+
+            itemForm.addEventListener('submit', handleFormSubmit);
+
+            inventoryList.addEventListener('click', (e) => {
+                const targetButton = e.target.closest('button');
+                if (targetButton) {
+                    e.stopPropagation(); // prevent card click
+                    const action = targetButton.dataset.action;
+                    const id = targetButton.dataset.id;
+                    if (action === 'edit') {
+                        const item = inventory.find(i => i.id === id);
+                        showForm(item);
+                    } else if (action === 'delete') {
+                        handleDelete(id);
+                    } else if (action === 'increment' || action === 'decrement') {
+                        const item = inventory.find(i => i.id === id);
+                        if (!item) return;
+
+                        if (action === 'decrement' && item.quantity === 0) {
+                            return; // Can't go below 0
+                        }
+
+                        itemToChange = item;
+                        quantityChangeType = action;
+
+                        const newQuantity = action === 'increment' ? item.quantity + 1 : item.quantity - 1;
+                        quantityModalTitle.textContent = `Confirm Quantity Change`;
+                        quantityModalText.textContent = `Change quantity for "${item.name}" to ${newQuantity}?`;
+                        quantityModal.classList.remove('hidden');
+                    }
+                } else {
+                    const card = e.target.closest('[data-id]');
+                    if (card) {
+                        const item = inventory.find(i => i.id === card.dataset.id);
+                        if (item) renderDetailsView(item);
+                    }
+                }
+            });
+
+            cancelDeleteBtn.addEventListener('click', () => {
+                deleteModal.classList.add('hidden');
+                itemIdToDelete = null;
+            });
+
+            confirmDeleteBtn.addEventListener('click', () => {
+                if (itemIdToDelete) {
+                    const index = inventory.findIndex(item => item.id === itemIdToDelete);
+                    if (index > -1) {
+                         const deletedItem = { ...inventory[index] };
+                         inventory = inventory.filter(item => item.id !== itemIdToDelete);
+                         deletedItem.quantity = 0;
+                         logTransaction('Deleted', deletedItem);
+                    }
+                   
+                    saveData();
+                    renderInventoryList();
+                    deleteModal.classList.add('hidden');
+                    if (currentSubView === 'details') {
+                        navigateTo(currentMainView);
+                    }
+                    itemIdToDelete = null;
+                }
+            });
+            
+            cancelQuantityBtn.addEventListener('click', () => {
+                quantityModal.classList.add('hidden');
+                itemToChange = null;
+                quantityChangeType = null;
+            });
+
+            confirmQuantityBtn.addEventListener('click', () => {
+                if (itemToChange && quantityChangeType) {
+                    const index = inventory.findIndex(i => i.id === itemToChange.id);
+                    if (index > -1) {
+                         if (quantityChangeType === 'increment') {
+                            inventory[index].quantity++;
+                            logTransaction('Purchased', inventory[index], 1);
+                        } else if (quantityChangeType === 'decrement' && inventory[index].quantity > 0) {
+                            inventory[index].quantity--;
+                            logTransaction('Sold', inventory[index], -1);
+                        }
+                    }
+
+                    saveData();
+                    renderInventoryList();
+
+                    quantityModal.classList.add('hidden');
+                    itemToChange = null;
+                    quantityChangeType = null;
+                }
+            });
+
+            document.getElementById('edit-item-details-fab').addEventListener('click', () => {
+                const item = inventory.find(i => i.id === currentItemId);
+                if (item) showForm(item);
+            });
+
+            document.getElementById('delete-item-details-btn').addEventListener('click', () => {
+                 if(currentItemId) handleDelete(currentItemId);
+            });
+
+            searchInput.addEventListener('input', () => {
+                renderInventoryList();
+            });
+
+            // --- INITIALIZATION ---
+            loadData();
+            navigateTo('list');
+        });
+    </script>
+</body>
+</html>
