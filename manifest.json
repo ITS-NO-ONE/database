@@ -1,0 +1,21 @@
+{
+"name": "Bike Shop Inventory",
+"short_name": "BikeInv",
+"start_url": ".",
+"display": "standalone",
+"background_color": "#f3f4f6",
+"theme_color": "#3B82F6",
+"description": "A simple inventory manager for a bike shop.",
+"icons": [
+{
+"src": "https://www.google.com/search?q=https://placehold.co/192x192/3B82F6/white%3Ftext%3DIcon",
+"sizes": "192x192",
+"type": "image/png"
+},
+{
+"src": "https://www.google.com/search?q=https://placehold.co/512x512/3B82F6/white%3Ftext%3DIcon",
+"sizes": "512x512",
+"type": "image/png"
+}
+]
+}
